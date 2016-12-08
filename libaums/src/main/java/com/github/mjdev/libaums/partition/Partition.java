@@ -112,39 +112,66 @@ public class Partition implements BlockDeviceDriver {
 
 	}
 
+    private long calcDevOffset(long offset) {
+        return offset / blockSize + logicalBlockAddress;
+    }
+
+    private int checkOffset(long offset) {
+        return (int) (offset % blockSize);
+    }
+
 	@Override
 	public void read(long offset, ByteBuffer dest) throws IOException {
-		long devOffset = offset / blockSize + logicalBlockAddress;
+		long devOffset = calcDevOffset(offset);
 		// TODO try to make this more efficient by for example making tmp buffer
 		// global
-		if (offset % blockSize != 0) {
+        int position = checkOffset(offset);
+		if (position > 0) {
 			Log.w(TAG, "device offset not a multiple of block size");
 			ByteBuffer tmp = ByteBuffer.allocate(blockSize);
 
 			blockDevice.read(devOffset, tmp);
 			tmp.clear();
-			tmp.position((int) (offset % blockSize));
+			tmp.position(position);
 			dest.put(tmp);
 
 			devOffset++;
 		}
 
-		if (dest.remaining() > 0)
-			blockDevice.read(devOffset, dest);
+		if (dest.remaining() > 0) {
+            // TODO try to make this more efficient by for example only allocating
+            // blockSize and making it global
+            ByteBuffer buffer;
+            if (dest.remaining() % blockSize != 0) {
+                Log.w(TAG, "we have to round up size to next block sector");
+                int rounded = blockSize - dest.remaining() % blockSize + dest.remaining();
+                buffer = ByteBuffer.allocate(rounded);
+                buffer.limit(rounded);
+            } else {
+                buffer = dest;
+            }
+
+            blockDevice.read(devOffset, buffer);
+
+            if (dest.remaining() % blockSize != 0) {
+                System.arraycopy(buffer.array(), 0, dest.array(), dest.position(), dest.remaining());
+            }
+        }
 	}
 
 	@Override
 	public void write(long offset, ByteBuffer src) throws IOException {
-		long devOffset = offset / blockSize + logicalBlockAddress;
+		long devOffset = calcDevOffset(offset);
 		// TODO try to make this more efficient by for example making tmp buffer
 		// global
-		if (offset % blockSize != 0) {
+        int position = checkOffset(offset);
+        if (position > 0) {
 			Log.w(TAG, "device offset not a multiple of block size");
 			ByteBuffer tmp = ByteBuffer.allocate(blockSize);
 
 			blockDevice.read(devOffset, tmp);
 			tmp.clear();
-			tmp.position((int) (offset % blockSize));
+			tmp.position(position);
 			int remaining = Math.min(tmp.remaining(), src.remaining());
 			tmp.put(src.array(), src.position(), remaining);
 			src.position(src.position() + remaining);
@@ -154,8 +181,34 @@ public class Partition implements BlockDeviceDriver {
 			devOffset++;
 		}
 
-		if (src.remaining() > 0)
-			blockDevice.write(devOffset, src);
+		if (src.remaining() > 0) {
+            // TODO try to make this more efficient by for example only allocating
+            // blockSize and making it global
+            ByteBuffer buffer;
+            if (src.remaining() % blockSize != 0) {
+                Log.w(TAG, "we have to round up size to next block sector");
+                int rounded = blockSize - src.remaining() % blockSize + src.remaining();
+                buffer = ByteBuffer.allocate(rounded);
+
+                // we need to read the remaining bytes now to avoid overwriting important data
+                long readOffset = offset + (src.remaining() / blockSize) * blockSize;
+                readOffset = calcDevOffset(readOffset);
+
+                buffer.limit(rounded);
+                buffer.position(rounded - blockSize);
+
+                blockDevice.read(readOffset, buffer);
+
+                buffer.clear();
+                System.arraycopy(src.array(), src.position(), buffer.array(), 0, src.remaining());
+            } else {
+                buffer = src;
+            }
+
+            blockDevice.write(devOffset, buffer);
+
+            src.position(src.limit());
+        }
 	}
 
 	@Override

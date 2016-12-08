@@ -198,26 +198,15 @@ public class ScsiBlockDevice implements BlockDeviceDriver {
 	@Override
 	public synchronized void read(long devOffset, ByteBuffer dest) throws IOException {
 		//long time = System.currentTimeMillis();
-		// TODO try to make this more efficient by for example only allocating
-		// blockSize and making it global
-		ByteBuffer buffer;
-		if (dest.remaining() % blockSize != 0) {
-			Log.w(TAG, "we have to round up size to next block sector");
-			int rounded = blockSize - dest.remaining() % blockSize + dest.remaining();
-			buffer = ByteBuffer.allocate(rounded);
-			buffer.limit(rounded);
-		} else {
-			buffer = dest;
+
+		if(dest.remaining() % blockSize != 0) {
+			throw new IllegalArgumentException("dest.remaining() must be multiple of blockSize!");
 		}
 
-		ScsiRead10 read = new ScsiRead10((int) devOffset, buffer.remaining(), blockSize);
+		ScsiRead10 read = new ScsiRead10((int) devOffset, dest.remaining(), blockSize);
 		//Log.d(TAG, "reading: " + read);
-		transferCommand(read, buffer);
 
-		if (dest.remaining() % blockSize != 0) {
-			System.arraycopy(buffer.array(), 0, dest.array(), dest.position(), dest.remaining());
-		}
-
+		transferCommand(read, dest);
 		dest.position(dest.limit());
 
 		//Log.d(TAG, "read time: " + (System.currentTimeMillis() - time));
@@ -231,23 +220,15 @@ public class ScsiBlockDevice implements BlockDeviceDriver {
 	@Override
 	public synchronized void write(long devOffset, ByteBuffer src) throws IOException {
 		//long time = System.currentTimeMillis();
-		// TODO try to make this more efficient by for example only allocating
-		// blockSize and making it global
-		ByteBuffer buffer;
-		if (src.remaining() % blockSize != 0) {
-			Log.w(TAG, "we have to round up size to next block sector");
-			int rounded = blockSize - src.remaining() % blockSize + src.remaining();
-			buffer = ByteBuffer.allocate(rounded);
-			buffer.limit(rounded);
-			System.arraycopy(src.array(), src.position(), buffer.array(), 0, src.remaining());
-		} else {
-			buffer = src;
+
+		if(src.remaining() % blockSize != 0) {
+			throw new IllegalArgumentException("src.remaining() must be multiple of blockSize!");
 		}
 
-		ScsiWrite10 write = new ScsiWrite10((int) devOffset, buffer.remaining(), blockSize);
+		ScsiWrite10 write = new ScsiWrite10((int) devOffset, src.remaining(), blockSize);
 		//Log.d(TAG, "writing: " + write);
-		transferCommand(write, buffer);
 
+		transferCommand(write, src);
 		src.position(src.limit());
 
 		//Log.d(TAG, "write time: " + (System.currentTimeMillis() - time));
