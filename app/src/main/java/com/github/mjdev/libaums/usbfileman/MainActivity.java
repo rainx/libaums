@@ -68,6 +68,7 @@ import android.widget.Toast;
 import com.github.mjdev.libaums.UsbMassStorageDevice;
 import com.github.mjdev.libaums.fs.FileSystem;
 import com.github.mjdev.libaums.fs.UsbFile;
+import com.github.mjdev.libaums.fs.UsbFileOutputStream;
 import com.github.mjdev.libaums.server.http.UsbFileHttpServerService;
 
 /**
@@ -667,6 +668,20 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
 			file.write(i, ByteBuffer.wrap("END\n".getBytes()));
 
 			file.close();
+
+			adapter.refresh();
+
+			file = dir.createFile("big_file_test2.txt");
+			UsbFileOutputStream stream = new UsbFileOutputStream(file);
+			stream.write("START\n".getBytes());
+
+			for (i = 6; i < 9000; i += 5) {
+				stream.write("TEST\n".getBytes());
+			}
+
+			stream.write("END\n".getBytes());
+
+			stream.close();
 
 			adapter.refresh();
 		} catch (IOException e) {
