@@ -114,4 +114,9 @@ public class Fat32FileSystem implements FileSystem {
 	public int getChunkSize() {
 		return bootSector.getBytesPerCluster();
 	}
+
+	@Override
+	public String getVolumeSerialNumber() {
+		return bootSector.getVolumeSerialNumber();
+	}
 }

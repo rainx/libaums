@@ -87,4 +87,10 @@ public class FileSystemWrapper implements FileSystem {
             return 4096;
         }
     }
+
+    @Override
+    public String getVolumeSerialNumber() {
+        Log.e(TAG, "error getting volume serial number");
+        return "00000000";
+    }
 }

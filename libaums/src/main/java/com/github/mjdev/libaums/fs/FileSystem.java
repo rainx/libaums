@@ -68,4 +68,10 @@ public interface FileSystem {
 	 * @return returns the optimal chuck size in bytes (you should read and write in multiples of that)
      */
 	int getChunkSize();
+
+
+	/**
+	 * @return returns the serial number of volume in Hexadecimal string
+	 */
+	String getVolumeSerialNumber();
 }

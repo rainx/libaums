@@ -39,7 +39,8 @@ import java.nio.ByteOrder;
 	private static final int FLAGS_OFF = 40;
 	private static final int ROOT_DIR_CLUSTER_OFF = 44;
 	private static final int FS_INFO_SECTOR_OFF = 48;
-	private static final int VOLUME_LABEL_OFF = 48;
+	private static final int VOLUME_LABEL_OFF = 71;
+	private static final int VOLUME_SERIAL_NUMBER_OFF = 0x43;
 
 	private short bytesPerSector;
 	private short sectorsPerCluster;
@@ -52,6 +53,7 @@ import java.nio.ByteOrder;
 	private boolean fatMirrored;
 	private byte validFat;
 	private String volumeLabel;
+	private String volumeSerialNumber;
 
 	private Fat32BootSector() {
 
@@ -90,6 +92,9 @@ import java.nio.ByteOrder;
 		}
 
 		result.volumeLabel = builder.toString();
+
+		int serialNumberInt32 = buffer.getInt(VOLUME_SERIAL_NUMBER_OFF);
+		result.volumeSerialNumber = String.format("%08x", serialNumberInt32);
 
 		return result;
 	}
@@ -239,6 +244,14 @@ import java.nio.ByteOrder;
 		return volumeLabel;
 	}
 
+	/**
+	 *
+	 * @return The Volume Serial Number in hex string
+	 */
+	/* package */ String getVolumeSerialNumber() {
+		return volumeSerialNumber;
+	}
+
 	@Override
 	public String toString() {
 		return "Fat32BootSector{" +
@@ -253,6 +266,7 @@ import java.nio.ByteOrder;
 				", fatMirrored=" + fatMirrored +
 				", validFat=" + validFat +
 				", volumeLabel='" + volumeLabel + '\'' +
+				", volumeSerialNumber='" + volumeSerialNumber + '\'' +
 				'}';
 	}
 }
